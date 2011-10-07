@@ -1,0 +1,10 @@
+*For logged in user mini-apps auto fetch[Default:allow] authorization code and access token
+
+#app.rb
+        if params[:authorization], get "/oauth/authorize" with logged or not logged in user
+#auth_spec.rb
+        it "should access token with grant_type#password"
+        it "should access token with grant_type#none"
+        it "should request protect resources"
+
+#rack-oauth2-server no grant_type 'refresh_code'
