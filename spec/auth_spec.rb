@@ -56,9 +56,17 @@ describe "auth steps" do
         get @oauth.authorize_path, {authorization: authorization_code.reverse}
         last_response.body.must_equal "Invalid authorization request"
 
+        logout! # user not logged in
+        get @oauth.authorize_path, {authorization: authorization_code}
+        last_response.status.must_equal 302
+        last_response["Location"].index("login").wont_be_nil
+        last_response["Location"].index(authorization_code).wont_be_nil
+
+        login_user
         get @oauth.authorize_path, {authorization: authorization_code}
         last_response.status.must_equal 200
-        last_response.body.index(@client.display_name).wont_be_nil
+        last_request.url.index(@oauth.authorize_path).wont_be_nil
+        last_request.url.index(authorization_code).wont_be_nil
       end
     end
 
@@ -83,12 +91,11 @@ describe "auth steps" do
         req = Rack::Request.new(Rack::MockRequest.env_for(last_response["Location"]))
         req.params["code"].wont_be_nil
       end
-
     end
 
     describe "oauth access token" do
       before do
-        get @oauth.authorize_path, {client_id: @client_id, redirect_uri: @redirect_uri, response_type: 'code'}
+        get @oauth.authorize_path, { client_id: @client_id, redirect_uri: @redirect_uri, response_type: 'code' }
         last_response.status.must_equal 303 # see other
         last_response["Location"].index("http://#{@oauth.host}#{@oauth.authorize_path}").wont_be_nil
         @authorization_code = last_response["Location"].split("authorization=")[1]
@@ -104,6 +111,11 @@ describe "auth steps" do
         last_response.status.must_equal 405
       end
 
+      it "should raise status unauthorized when request a protected resource" do
+        get '/u/name'
+        last_response.status.must_equal 401
+      end
+
       it "should return bad request in grant_type authorization_code with wrong code" do
         post @oauth.access_token_path, { grant_type: "authorization_code", code: @code.reverse, redirect_uri: @redirect_uri, client_id: @client.id, client_secret: @client.secret }
         last_response.body.index("invalid_grant").wont_be_nil
@@ -111,13 +123,45 @@ describe "auth steps" do
 
       it "should access token grant_type authorization_code with right code" do
         post @oauth.access_token_path, { grant_type: "authorization_code", code: @code, redirect_uri: @client.redirect_uri, client_id: @client.id, client_secret: @client.secret }
+        body = JSON.parse(last_response.body)
+        body["access_token"].wont_be_nil
+        logout!
+        get '/u/name', {}, {"oauth.access_token" => body["access_token"]}
+        last_response.body.must_equal "nil"
+        login_user
+        get '/u/name', {}, {"oauth.access_token" => body["access_token"]}
+        last_response.body.must_equal @user.name
+
       end
 
-      # TODO
-      #it "should access token with grant_type#password"
-      #it "should access token with grant_type#none"
-      #it "should request protect resources"
+      # two-legged
+      it "should access token with grant_type#none" do
+        post @oauth.access_token_path, { grant_type: "none", redirect_uri: @client.redirect_uri, client_id: @client.id, client_secret: @client.secret }
+        body = JSON.parse(last_response.body)
+        body["access_token"].wont_be_nil
+        logout!
+        get '/u/name', {}, {"oauth.access_token" => body["access_token"]}
+        last_response.body.must_equal "nil"
+        login_user
+        get '/u/name', {}, {"oauth.access_token" => body["access_token"]}
+        last_response.body.must_equal @user.name
+      end
 
+      it "should access token with grant_type#password" do
+        login_user
+        post @oauth.access_token_path, { grant_type: "password", code: @code, redirect_uri: @client.redirect_uri,
+                                         client_id: @client.id, client_secret: @client.secret,
+                                         username: @user.name, password: @user.password }
+        body = JSON.parse(last_response.body)
+        body["access_token"].wont_be_nil
+
+        logout!
+        get '/u/name', {}, {"oauth.access_token" => body["access_token"]}
+        last_response.body.must_equal "nil"
+        login_user
+        get '/u/name', {}, {"oauth.access_token" => body["access_token"]}
+        last_response.body.must_equal @user.name
+      end
 
     end
 
