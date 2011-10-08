@@ -67,6 +67,18 @@ describe "auth steps" do
         last_response.status.must_equal 200
         last_request.url.index(@oauth.authorize_path).wont_be_nil
         last_request.url.index(authorization_code).wont_be_nil
+
+        # add for simplecov
+        get "/oauth/login", {authorization: authorization_code}
+        last_response.body.index(authorization_code).wont_be_nil
+
+        post "/oauth/login_auth", { username: @user.name, password: @user.password, authorization: authorization_code }
+        last_response.status.must_equal 302
+        last_response["Location"].index(@oauth.authorize_path).wont_be_nil
+        last_response["Location"].index(authorization_code).wont_be_nil
+
+        post "/oauth/login_auth", { username: @user.name.reverse, password: @user.password, authorization: authorization_code }
+        last_response.status.must_equal 200
       end
     end
 

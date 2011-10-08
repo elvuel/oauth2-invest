@@ -1,4 +1,9 @@
 # encoding: utf-8
+require 'simplecov'
+SimpleCov.start do
+  add_filter './init.rb'
+end
+
 ENV['RACK_ENV'] = 'test'
 
 require 'rubygems' unless defined? Gem

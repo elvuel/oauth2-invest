@@ -1,3 +1,4 @@
 .bundle
 .idea/
+coverage/
 Gemfile.lock
