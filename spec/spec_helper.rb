@@ -15,6 +15,10 @@ def login_user
   post '/u/auth', {username: @user.name, password: @user.password}
 end
 
+def logout!
+  get '/u/logout'
+end
+
 #require 'capybara'
 #require 'capybara/dsl'
 #require 'capybara/rspec'
