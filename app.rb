@@ -3,11 +3,11 @@ require_relative "init"
 require_relative "models/user"
 
 class App < Sinatra::Base
-  if development?
-    reset!
-    use Rack::Reloader, 0
-    use Rack::Logger
-  end
+  #if development?
+  #  reset!
+  #  use Rack::Reloader, 0
+  #  use Rack::Logger
+  #end
 
   set :sessions, true
   set :show_exceptions, false
@@ -30,7 +30,6 @@ class App < Sinatra::Base
 
   #before "/oauth/*" do
   #  halt oauth.deny! if oauth.scope.include?("time-travel") # Only Superman can do that
-  # rack-oauth2-server: current no grant_type 'refresh_code' TODO
   #end
 
   before do
@@ -57,6 +56,14 @@ class App < Sinatra::Base
     end
   end
 
+  get '/u/logout' do
+    session[:user_id] = nil
+    redirect '/'
+  end
+
+  oauth_required "/u/name"
+
+  # protected resource
   get '/u/name' do
     if current_user
       current_user.name
@@ -70,31 +77,53 @@ class App < Sinatra::Base
       #auth_request = Rack::OAuth2::Server.get_auth_request(request.GET["authorization"])
       #client = Rack::OAuth2::Server.get_client(auth_request.client_id)
       # if client... end
-      str = <<-HTML
-      <h2>The application #{oauth.client.display_name}, #{oauth.client.link} </h2>
-      HTML
       if current_user
-        "TODO"# TODO
+        #if oauth.authenticated?
+        #  oauth.grant! auth_request.client_id
+        #else
+        #end
+          <<-HTML
+        <h2>The application #{oauth.client.display_name}, #{oauth.client.link} </h2>
+          <form action="/oauth/grant" method="post">
+          <button>Allow</button>
+          <input type="hidden" name="authorization" value="#{oauth.authorization}">
+          <input type="hidden" name="client_id" value="#{oauth.client.id}">
+        </form>
+        <form action="/oauth/deny" method="post">
+          <button>Deny</button>
+          <input type="hidden" name="authorization" value="#{oauth.authorization}">
+        </form>
+          HTML
+
       else
-        str << <<-CONFIRM
-<form action="/oauth/grant" method="post">
-        <button>Allow</button>
-        <input type="hidden" name="authorization" value="#{oauth.authorization}">
-        <input type="hidden" name="client_id" value="#{oauth.client.id}">
-      </form>
-        CONFIRM
+        redirect '/oauth/login?authorization=' + oauth.authorization
       end
-      str << <<-DENY
-      <form action="/oauth/deny" method="post">
-        <button>Deny</button>
-        <input type="hidden" name="authorization" value="#{oauth.authorization}">
-      </form>
-      DENY
+    end
+  end
+
+  get "/oauth/login" do
+    <<-HTML
+    <h2>user login</h2>
+<form action="/oauth/login_auth" method="post">
+<input type="hidden" name="authorization" value="#{params[:authorization]}" />
+<label>name:</label><input type="text" name="username" />
+<label>password:</label><input type="password" name="password" />
+<button>Connect</button>
+</form>
+    HTML
+  end
+
+  post "/oauth/login_auth" do
+    user = User.find_by_name(params[:username])
+    if user && user.authenticate?(params[:password])
+      session[:user_id] = user.id
+      redirect "/oauth/authorize?authorization=#{params[:authorization]}"
+    else
+      "<a href='/oauth/login?authorization=#{params[:authorization]}'>back</a>"
     end
   end
 
   # callback use HtmlForm and grant_type password
-  # TODO 已登录用户 无需出现登录框， 可以直接请求或者点击‘ALLOW’ 内部APP无需 ALLOW就可直接使用！
   post '/oauth/access_token' do
 
   end
