@@ -1,6 +1,8 @@
 # grant_type 'none' for default bundle apps?
 # oauth.scope and client.requested_scope?
+# oauth_required scope test
+# pending: options.authenticator.arity != 2  => [usr, pwd, client_id, scope]
 
 #rack-oauth2-server no grant_type 'refresh_code'
 
-# pending: options.authenticator.arity != 2  => [usr, pwd, client_id, scope]
+
