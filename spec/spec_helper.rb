@@ -2,6 +2,7 @@
 require 'simplecov'
 SimpleCov.start do
   add_filter './init.rb'
+  add_filter '/spec/'
 end
 
 ENV['RACK_ENV'] = 'test'
