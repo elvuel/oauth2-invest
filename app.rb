@@ -1,6 +1,5 @@
 # encoding: utf-8
 require_relative "init"
-require_relative "models/user"
 
 class App < Sinatra::Base
   #if development?
@@ -21,9 +20,10 @@ class App < Sinatra::Base
 
   register Rack::OAuth2::Sinatra
 
-  oauth.authenticator = lambda do |usr, pwd|
-    user = User.find_by_name(usr)
-    user.name if user && user.authenticate?(pwd)
+  oauth.authenticator = lambda do |login, password, client_id, scope|
+    # arity logic?
+    user = User.authenticate?(login: login, password: password)
+    user.name if user
   end
   oauth.host = "localhost"
   oauth.database = Mongo::Connection.new[MONGO_DATABASE]
@@ -37,7 +37,11 @@ class App < Sinatra::Base
   end
   helpers do
     def current_user
-      User.find(session[:user_id]) if session[:user_id] || false
+      if session[:user_id]
+        User.first(id: session[:user_id])
+      else
+        false
+      end
     end
 
   end
@@ -47,8 +51,8 @@ class App < Sinatra::Base
   end
 
   post '/u/auth' do
-    user = User.find_by_name(params[:username])
-    if user && user.authenticate?(params[:password])
+    user = User.authenticate?(params)
+    if user
       session[:user_id] = user.id
       "login success!"
     else
@@ -106,7 +110,7 @@ class App < Sinatra::Base
     <h2>user login</h2>
 <form action="/oauth/login_auth" method="post">
 <input type="hidden" name="authorization" value="#{params[:authorization]}" />
-<label>name:</label><input type="text" name="username" />
+<label>name:</label><input type="text" name="login" />
 <label>password:</label><input type="password" name="password" />
 <button>Connect</button>
 </form>
@@ -114,8 +118,8 @@ class App < Sinatra::Base
   end
 
   post "/oauth/login_auth" do
-    user = User.find_by_name(params[:username])
-    if user && user.authenticate?(params[:password])
+    user = User.authenticate?(params)
+    if user
       session[:user_id] = user.id
       redirect "/oauth/authorize?authorization=#{params[:authorization]}"
     else

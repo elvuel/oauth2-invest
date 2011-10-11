@@ -3,7 +3,11 @@ require "bundler/setup"
 
 Bundler.require :default
 
-MONGO_DATABASE = "auth_" + ENV.fetch("RACK_ENV")
+require_relative 'config'
+
+DataMapper.setup(:default, SQL_URL)
+
+require_relative "models/user"
 
 case ENV.fetch("RACK_ENV")
   when "test"

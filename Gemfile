@@ -4,12 +4,19 @@ source :rubygems
 #group :development, :production, :test do
   gem 'sinatra', require: "sinatra/base"
   gem 'rack-oauth2-server', require: "rack/oauth2/sinatra"
-  gem 'rack'
+  #gem 'rack'
   gem "memcache-client"
+  gem "dm-sqlite-adapter", "~> 1.2.0.rc2"
+  gem "dm-core" , "~> 1.2.0.rc2"
+  gem "dm-migrations", "~> 1.2.0.rc2"
+  gem "dm-is-reflective", "~> 1.0.0" # need dm-migration for *Adapter#type_map
+  gem "bcrypt-ruby", require: "bcrypt"
+
 #end
 
 group :development, :test do
   gem "ruby-debug19", require: "ruby-debug"
+  gem 'pry'
 end
 
 group :test do

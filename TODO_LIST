@@ -1,3 +1,5 @@
+=refactor for user model(passed), but need to figure out what's get @oauth.authorize_path blocked in some tests.
+
 # grant_type 'none' for default bundle apps?
 # oauth.scope and client.requested_scope?
 # oauth_required scope test

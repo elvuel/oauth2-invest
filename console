@@ -1,0 +1,4 @@
+#!/usr/bin/env ruby
+ENV['RACK_ENV'] ||= 'development'
+require_relative 'init'
+pry
