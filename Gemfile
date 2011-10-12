@@ -5,6 +5,7 @@ source :rubygems
   gem 'sinatra', require: "sinatra/base"
   gem 'rack-oauth2-server', require: "rack/oauth2/sinatra"
   #gem 'rack'
+  gem 'json'
   gem "memcache-client"
   gem "dm-sqlite-adapter", "~> 1.2.0.rc2"
   gem "dm-core" , "~> 1.2.0.rc2"
@@ -26,5 +27,4 @@ group :test do
   gem "database_cleaner", git: 'git://github.com/bmabey/database_cleaner.git'
   gem "minitest", require: 'minitest/spec'
   #gem 'capybara'
-  gem 'json'
 end

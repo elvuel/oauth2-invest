@@ -8,22 +8,23 @@ class App < Sinatra::Base
   #  use Rack::Logger
   #end
 
-  set :sessions, true
-  set :show_exceptions, false
+  use RackOauth2::Custom::Serve
   use Rack::Session::Memcache,
       key: 'rack.session.auth',
       memcache_server: "localhost:11211",
       expire_after: 3600
 
+  set :sessions, true
+  set :show_exceptions, false
   set :root, File.dirname(__FILE__)
   set :public, Proc.new { File.join(root, "public") }
+
 
   register Rack::OAuth2::Sinatra
 
   oauth.authenticator = lambda do |login, password, client_id, scope|
-    # arity logic?
     user = User.authenticate?(login: login, password: password)
-    user.name if user
+    user.id if user
   end
   oauth.host = "localhost"
   oauth.database = Mongo::Connection.new[MONGO_DATABASE]
@@ -32,9 +33,10 @@ class App < Sinatra::Base
   #  halt oauth.deny! if oauth.scope.include?("time-travel") # Only Superman can do that
   #end
 
-  before do
-    #oauth.authenticated?
-  end
+  #def set_current_user
+  #  session[:user_id] = User.find(id: oauth.identity).id if oauth.authenticated?
+  #end
+
   helpers do
     def current_user
       if session[:user_id]
@@ -78,14 +80,7 @@ class App < Sinatra::Base
 
   get "/oauth/authorize" do
     if params[:authorization]
-      #auth_request = Rack::OAuth2::Server.get_auth_request(request.GET["authorization"])
-      #client = Rack::OAuth2::Server.get_client(auth_request.client_id)
-      # if client... end
       if current_user
-        #if oauth.authenticated?
-        #  oauth.grant! auth_request.client_id
-        #else
-        #end
           <<-HTML
         <h2>The application #{oauth.client.display_name}, #{oauth.client.link} </h2>
           <form action="/oauth/grant" method="post">

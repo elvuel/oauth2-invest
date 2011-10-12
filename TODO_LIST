@@ -7,4 +7,41 @@
 
 #rack-oauth2-server no grant_type 'refresh_code'
 
+# http basic
+ def auth
+    @auth ||= Rack::Auth::Basic::Request.new(request.env)
+  end
 
+  def unauthorized!(realm="myApp.com")
+    header 'WWW-Authenticate' => %(Basic realm="#{realm}")
+    throw :halt, [ 401, 'Authorization Required' ]
+  end
+
+  def bad_request!
+    throw :halt, [ 400, 'Bad Request' ]
+  end
+
+  def authorized?
+    request.env['REMOTE_USER']
+  end
+
+
+
+#unbundled_client_error_klass__ = Rack::OAuth2::Server.const_set("UnBundledClientError", Rack::OAuth2::Server::OAuthError)
+#unbundled_client_error_klass__.class_eval do
+#  def initialize
+#    super :unbundled_client, "Client ID is unbundled."
+#  end
+#end
+
+#module Rack
+#  module OAuth2
+#    class Server
+#      class UnBundledClientError < OAuthError
+#        def initialize
+#          super :unbundled_client, "Client ID is unbundled."
+#        end
+#      end # UnBundledClientError
+#    end # Server
+#  end # OAuth2
+#end # Rack
