@@ -4,12 +4,9 @@ require_relative 'spec_helper'
 describe "auth steps" do
 
     before do
-      app.settings.oauth.host = Rack::Test::DEFAULT_HOST
-      @oauth = app.settings.oauth
       User.login_field = :email
-      clients = Rack::OAuth2::Server::Client.all
-      clients.each { |client| Rack::OAuth2::Server::Client.delete(client.id) }
-
+      set_oauth_host
+      oauth2_clients_empty!
       @redirect_uri = "http://localhost/oauth/callback"
       @client = Rack::OAuth2::Server.register(display_name: "HooyaTest", link: "http://localhost/",
                                               image_url: "http://www.google.com.hk/images/nav_logo86.png",
@@ -22,7 +19,7 @@ describe "auth steps" do
 
     describe "authorization code step validations" do
       it "should return a missing redirect_uri" do
-        get "/oauth/authorize"
+        get @oauth.authorize_path
         last_response.body.must_equal "Missing redirect URL"
       end
 
@@ -48,46 +45,40 @@ describe "auth steps" do
       end
 
       it "should response succeed and 303 redirect to same url with right authorization code" do
-        get "/oauth/authorize", {client_id: @client_id, redirect_uri: @redirect_uri, response_type: 'code'}
-        last_response.status.must_equal 303 # see other
-        last_response["Location"].index("http://#{@oauth.host}#{"/oauth/authorize"}").wont_be_nil
-        authorization_code = last_response["Location"].split("authorization=")[1]
+        get_oauth_authorization!
 
-        get "/oauth/authorize", {authorization: authorization_code.reverse}
+        get "/oauth/authorize", {authorization: @authorization_code.reverse}
         last_response.body.must_equal "Invalid authorization request"
 
         logout! # user not logged in
-        get "/oauth/authorize", {authorization: authorization_code}
+        get "/oauth/authorize", {authorization: @authorization_code}
         last_response.status.must_equal 302
         last_response["Location"].index("login").wont_be_nil
-        last_response["Location"].index(authorization_code).wont_be_nil
+        last_response["Location"].index(@authorization_code).wont_be_nil
 
         login_user
-        get "/oauth/authorize", {authorization: authorization_code}
+        get "/oauth/authorize", {authorization: @authorization_code}
         last_response.status.must_equal 200
         last_request.url.index("/oauth/authorize").wont_be_nil
-        last_request.url.index(authorization_code).wont_be_nil
+        last_request.url.index(@authorization_code).wont_be_nil
 
         # add for simplecov
-        get "/oauth/login", {authorization: authorization_code}
-        last_response.body.index(authorization_code).wont_be_nil
+        get "/oauth/login", {authorization: @authorization_code}
+        last_response.body.index(@authorization_code).wont_be_nil
 
-        post "/oauth/login_auth", { login: @user.email, password: @user.name, authorization: authorization_code }
+        post "/oauth/login_auth", { login: @user.email, password: @user.name, authorization: @authorization_code }
         last_response.status.must_equal 302
         last_response["Location"].index("/oauth/authorize").wont_be_nil
-        last_response["Location"].index(authorization_code).wont_be_nil
+        last_response["Location"].index(@authorization_code).wont_be_nil
 
-        post "/oauth/login_auth", { login: @user.email.reverse, password: @user.name, authorization: authorization_code }
+        post "/oauth/login_auth", { login: @user.email.reverse, password: @user.name, authorization: @authorization_code }
         last_response.status.must_equal 200
       end
     end
 
     describe "oauth #grant and #deny" do
       before do
-        get "/oauth/authorize", {client_id: @client_id, redirect_uri: @redirect_uri, response_type: 'code'}
-        last_response.status.must_equal 303 # see other
-        last_response["Location"].index("http://#{@oauth.host}#{"/oauth/authorize"}").wont_be_nil
-        @authorization_code = last_response["Location"].split("authorization=")[1]
+        get_oauth_authorization!
       end
 
       it "should redirect to call back with deny request" do

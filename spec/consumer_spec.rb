@@ -3,11 +3,9 @@ require_relative 'spec_helper'
 
 describe "consumer register update" do
   before do
-    app.settings.oauth.host = Rack::Test::DEFAULT_HOST
-    clients = Rack::OAuth2::Server::Client.all
-    clients.each do |client|
-      Rack::OAuth2::Server::Client.delete(client.id)
-    end
+    set_oauth_host
+    oauth2_clients_empty!
+
     @display_name = "HOOYA-Consumer".reverse
     @link = "http://localhost/"
     @image_url = "http://www.google.com.hk/images/nav_logo86.png"

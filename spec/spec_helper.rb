@@ -26,6 +26,25 @@ module Helpers
   def logout!
     get '/u/logout'
   end
+
+  def set_oauth_host
+    app.settings.oauth.host = Rack::Test::DEFAULT_HOST
+    @oauth = app.settings.oauth
+  end
+
+  def oauth2_clients_empty!
+    clients = Rack::OAuth2::Server::Client.all
+    clients.each { |client| Rack::OAuth2::Server::Client.delete(client.id) }
+  end
+
+  # Here take assertions in!
+  def get_oauth_authorization!
+    get "/oauth/authorize", {client_id: @client_id, redirect_uri: @redirect_uri, response_type: 'code'}
+    last_response.status.must_equal 303 # see other
+    last_response["Location"].index("http://#{@oauth.host}#{"/oauth/authorize"}").wont_be_nil
+    @authorization_code = last_response["Location"].split("authorization=")[1]
+  end
+
 end
 
 include Helpers
