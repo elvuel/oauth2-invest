@@ -9,7 +9,7 @@ DataMapper.setup(:default, SQL_URL)
 
 # TODO refactor with Dir.glob(..).each { |file| require file } if many
 require_relative "models/user"
-require_relative "models/bundled_app"
+require_relative "models/application"
 
 case ENV.fetch("RACK_ENV")
   when "test"
@@ -26,7 +26,7 @@ module RackOauth2
         request = Rack::Request.new(env)
         params = request.params
         if request.post?  and request.path == "/oauth/access_token" and params["client_id"] and params["grant_type"] == "password"
-          bundled_app = BundledApp.first(client_id: params["client_id"])
+          bundled_app = Application.first(client_id: params["client_id"])
           if bundled_app
             app.call(env)
           else # return or set params[:client_id] to nil

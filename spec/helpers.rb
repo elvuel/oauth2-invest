@@ -30,7 +30,7 @@ module Helpers
   end
 
   def bundled_apps_empty!
-    BundledApp.destroy!
+    Application.destroy!
   end
 
   def create_apps_to_bundled!(count = 5)
@@ -40,7 +40,7 @@ module Helpers
     end
     clients = Rack::OAuth2::Server::Client.all
     clients.each do |client|
-      BundledApp.create(name: client.display_name, client_id: client.id, created_at: Time.now)
+      Application.create(name: client.display_name, client_id: client.id, created_at: Time.now)
     end
   end
 

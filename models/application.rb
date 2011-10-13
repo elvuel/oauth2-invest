@@ -1,6 +1,6 @@
 # encoding: utf-8
 
-class BundledApp
+class Application
   include DataMapper::Resource
   storage_names[:default] = 'bundled_apps'
 
