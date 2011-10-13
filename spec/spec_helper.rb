@@ -4,6 +4,7 @@ SimpleCov.start do
   add_filter './init.rb'
   add_filter './config.rb'
   add_filter '/spec/'
+  add_filter '/middlewares/'
 end
 
 ENV['RACK_ENV'] = 'test'
