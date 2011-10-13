@@ -17,7 +17,11 @@ class App < Sinatra::Base
   set :sessions, true
   set :show_exceptions, false
   set :root, File.dirname(__FILE__)
-  set :public, Proc.new { File.join(root, "public") }
+  if Sinatra::VERSION > "1.2.6"
+    set :public_folder, Proc.new { File.join(root, "public") }
+  else
+    set :public, Proc.new { File.join(root, "public") }
+  end
 
 
   register Rack::OAuth2::Sinatra
