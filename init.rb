@@ -7,9 +7,10 @@ require_relative 'config'
 
 DataMapper.setup(:default, SQL_URL)
 
-# TODO refactor with Dir.glob(..).each { |file| require file } if many
-require_relative "models/user"
-require_relative "models/application"
+Dir["#{File.dirname(__FILE__)}/models/*.rb"].each do |file|
+  require file
+end
+
 require_relative "middlewares/bundled_application_serve"
 
 case ENV.fetch("RACK_ENV")
@@ -21,3 +22,56 @@ case ENV.fetch("RACK_ENV")
 end
 
 DataMapper.auto_upgrade!
+
+if ENV.fetch("RACK_ENV") == "development" && ENV["INIT_CLIENTS"]
+# empty user
+  User.destroy!
+  Application.destroy!
+  %w(one two three).each do |item|
+    user = User.new
+    user.name, user.email, user.password = item, "#{item}@test.com", item
+    user.encrypt_password
+    user.save
+  end
+
+  Rack::OAuth2::Server.options.database = Mongo::Connection.new()[MONGO_DATABASE]
+
+# empty client
+  clients = Rack::OAuth2::Server::Client.all
+  clients.each { |client| Rack::OAuth2::Server::Client.delete(client.id) }
+
+# test clients
+  [["auth_client", 9191]].each do |config|
+    app, port = config
+    app_path = File.join(File.dirname(__FILE__), '../', app)
+    if File.exist?(app_path) && File.directory?(app_path)
+
+      client = Rack::OAuth2::Server.register(display_name: "HooyaClient-#{app}", link: "http://localhost:#{port}/",
+                                             image_url: "http://www.google.com.hk/images/nav_logo86.png",
+                                             scope: %{read write},
+                                             redirect_uri: "http://localhost:#{port}/oauth/callback")
+      Application.create(name: client.display_name, client_id: client.id, created_at: Time.now)
+      File.open(app_path + "/client_key.rb", "w") do |f|
+        f.write <<-_EOF_
+# encoding: utf-8
+
+CLIENT_ID = "#{client.id}"
+CLIENT_SECRET = "#{client.secret}"
+MY_DISP_NAME = "#{client.display_name}"
+APP_PORT = #{port}
+        _EOF_
+      end
+
+      File.open(app_path + "/config.ru", "w") do |f|
+        f.write <<_EOF
+# encoding: utf-8
+require File.join(File.dirname(__FILE__),  'app.rb')
+
+#\\-p #{port}
+run App
+_EOF
+      end
+    end # if
+
+  end # rest clients
+end

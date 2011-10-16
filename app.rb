@@ -2,27 +2,27 @@
 require_relative "init"
 
 class App < Sinatra::Base
-  #if development?
-  #  reset!
-  #  use Rack::Reloader, 0
-  #  use Rack::Logger
-  #end
+  if development?
+    reset!
+    use Rack::Reloader, 0
+    use Rack::Logger
+  end
 
   use RackOauth2::Custom::Serve
   use Rack::Session::Memcache,
-      key: 'rack.session.auth',
+      key: "rack.session.application.#{ENV.fetch("RACK_ENV")}",
       memcache_server: "localhost:11211",
       expire_after: 3600
 
   set :sessions, true
   set :show_exceptions, false
   set :root, File.dirname(__FILE__)
+
   if Sinatra::VERSION > "1.2.6"
     set :public_folder, Proc.new { File.join(root, "public") }
   else
     set :public, Proc.new { File.join(root, "public") }
   end
-
 
   register Rack::OAuth2::Sinatra
 
@@ -49,11 +49,44 @@ class App < Sinatra::Base
         false
       end
     end
-
   end
 
   get '/' do
     'hello'
+  end
+
+  post '/oauth/access_token' do
+
+  end
+
+  # setting headers oauth.authorization and oauth.identity, then redirect back to consumer callback uri
+  post "/oauth/grant" do
+    if current_user
+      oauth.grant! current_user.id
+    else
+      redirect request.env["HTTP_REFERER"]
+    end
+  end
+
+  # set status 403 and redirect to consumer callback with access_denied
+  post "/oauth/deny" do
+    if current_user
+      oauth.deny!
+    else
+      redirect request.env["HTTP_REFERER"]
+    end
+  end
+
+  oauth_required "/u/name"
+
+  # protected resource
+  get '/u/name' do
+    user = User.get(oauth.identity)
+    if user
+      user.name
+    else
+      "nil"
+    end
   end
 
   post '/u/auth' do
@@ -69,17 +102,6 @@ class App < Sinatra::Base
   get '/u/logout' do
     session[:user_id] = nil
     redirect '/'
-  end
-
-  oauth_required "/u/name"
-
-  # protected resource
-  get '/u/name' do
-    if current_user
-      current_user.name
-    else
-      "nil"
-    end
   end
 
   get "/oauth/authorize" do
@@ -124,21 +146,6 @@ class App < Sinatra::Base
     else
       "<a href='/oauth/login?authorization=#{params[:authorization]}'>back</a>"
     end
-  end
-
-  # callback use HtmlForm and grant_type password
-  post '/oauth/access_token' do
-
-  end
-
-  # setting headers oauth.authorization and oauth.identity, then redirect back to consumer callback uri
-  post "/oauth/grant" do
-    oauth.grant! params[:client_id]
-  end
-
-  # set status 403 and redirect to consumer callback with access_denied
-  post "/oauth/deny" do
-    oauth.deny!
   end
 
   post '/client/register' do

@@ -24,7 +24,7 @@ group :test do
   gem "rack-test", require: "rack/test"
   #gem "rspec"
   gem "simplecov", require: false
-  gem "database_cleaner", git: 'git://github.com/bmabey/database_cleaner.git'
+  #gem "database_cleaner", git: 'git://github.com/bmabey/database_cleaner.git'
   gem "minitest", require: 'minitest/spec'
   #gem 'capybara'
 end

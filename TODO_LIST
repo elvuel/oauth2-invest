@@ -1,3 +1,6 @@
+STORE ACCESS_TOKEN FOR APPS OF USER
+RE-ROAD SPEC
+
 =refactor for user model(passed), but need to figure out what's get @oauth.authorize_path blocked in some tests.
 
 # grant_type 'none' for default bundle apps?
