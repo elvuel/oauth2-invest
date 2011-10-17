@@ -158,8 +158,8 @@ class App < Sinatra::Base
   post "/oauth/login_auth" do
     user = User.authenticate?(params)
     if user
-      init_app_connections
       session[:user_id] = user.id
+      init_app_connections
       redirect "/oauth/authorize?authorization=#{params[:authorization]}"
     else
       "<a href='/oauth/login?authorization=#{params[:authorization]}'>back</a>"
