@@ -5,7 +5,6 @@ class App < Sinatra::Base
   if development?
     reset!
     use Rack::Reloader, 0
-    use Rack::Logger
   end
 
   use RackOauth2::Custom::Serve
@@ -33,22 +32,28 @@ class App < Sinatra::Base
   oauth.host = "localhost"
   oauth.database = Mongo::Connection.new[MONGO_DATABASE]
 
-  #before "/oauth/*" do
-  #  halt oauth.deny! if oauth.scope.include?("time-travel") # Only Superman can do that
-  #end
-
-  #def set_current_user
-  #  session[:user_id] = User.find(id: oauth.identity).id if oauth.authenticated?
-  #end
-
   helpers do
     def current_user
       if session[:user_id]
-        User.first(id: session[:user_id])
+        User.get(session[:user_id])
       else
         false
       end
     end
+
+    # this method currently let it be.
+    def init_app_connections(user = current_user)
+      # TODO moving its to the very position (n: refactor)
+      if user && user.app_connections.empty?
+        Application.all.each do |app|
+          client = Rack::OAuth2::Server.get_client(app.client_id)
+          # grant_type none call
+          access_token = Rack::OAuth2::Server::AccessToken.get_token_for(user.id, client, client.scope)
+          user.app_connections.create!(client_id: client.id, access_token: access_token.token)
+        end
+      end
+    end
+
   end
 
   get '/' do
@@ -77,7 +82,18 @@ class App < Sinatra::Base
     end
   end
 
-  oauth_required "/u/name"
+  oauth_required "/u/name"#, "/user/authorized"
+
+  # TODO for internal mini apps(n: refactor)
+  get "/user/authorized" do
+    user = User.get(oauth.identity)
+    if user && oauth.access_token
+      app_connection = user.app_connections.first(client_id: oauth.client.id)
+      (app_connection.access_token == oauth.access_token).to_s
+    else
+      "false"
+    end
+  end
 
   # protected resource
   get '/u/name' do
@@ -93,6 +109,7 @@ class App < Sinatra::Base
     user = User.authenticate?(params)
     if user
       session[:user_id] = user.id
+      init_app_connections
       "login success!"
     else
       "login failed!"
@@ -141,6 +158,7 @@ class App < Sinatra::Base
   post "/oauth/login_auth" do
     user = User.authenticate?(params)
     if user
+      init_app_connections
       session[:user_id] = user.id
       redirect "/oauth/authorize?authorization=#{params[:authorization]}"
     else
