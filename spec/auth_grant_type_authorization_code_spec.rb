@@ -24,7 +24,7 @@ describe "auth grant type#authorization_code" do
     body["error"].must_equal "invalid_client"
   end
 
-  it "should access token grant_type authorization_code with right code" do
+  it "should access token grant_type authorization_code with right code using bundled client" do
     post "/oauth/access_token", { grant_type: "authorization_code", code: @code, redirect_uri: @client.redirect_uri, client_id: @client.id, client_secret: @client.secret }
     body = JSON.parse(last_response.body)
     body["access_token"].wont_be_nil
@@ -35,6 +35,35 @@ describe "auth grant type#authorization_code" do
     login_user
     get '/u/name', {}, {"oauth.access_token" => body["access_token"], "oauth.identity" => @user.id}
     last_response.body.must_equal @user.name
+  end
+
+  it "should access token grant_type authorization_code with right code using 3rd client" do
+    oauth2_clients_empty!
+    create_apps_to_bundled!
+    register_oauth_client!
+    get_oauth_authorization!
+    login_user
+    post_oauth_grant!
+
+    app_conn = @user.app_connections.first(client_id: @client.id)
+    app_conn.must_be_nil
+
+    post "/oauth/access_token", { grant_type: "authorization_code", code: @code, redirect_uri: @client.redirect_uri, client_id: @client.id, client_secret: @client.secret }
+    body = JSON.parse(last_response.body)
+    body["access_token"].wont_be_nil
+
+    # saved the access token for the identity
+    app_conn = @user.app_connections.first(client_id: @client.id)
+    app_conn.wont_be_nil
+    (app_conn.access_token == body["access_token"]).must_equal true
+
+    get '/u/name', {}, {"oauth.access_token" => body["access_token"]}
+    last_response.body.must_equal "nil"
+
+    login_user
+    get '/u/name', {}, {"oauth.access_token" => body["access_token"], "oauth.identity" => @user.id}
+    last_response.body.must_equal @user.name
+
   end
 
 end

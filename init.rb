@@ -12,6 +12,7 @@ Dir["#{File.dirname(__FILE__)}/models/*.rb"].each do |file|
 end
 
 require_relative "middlewares/bundled_application_serve"
+require_relative "middlewares/tap_access_token"
 
 case ENV.fetch("RACK_ENV")
   when "test"

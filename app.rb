@@ -7,7 +7,7 @@ class App < Sinatra::Base
     use Rack::Reloader, 0
   end
 
-  use RackOauth2::Custom::Serve
+
   use Rack::Session::Memcache,
       key: "rack.session.application.#{ENV.fetch("RACK_ENV")}",
       memcache_server: "localhost:11211",
@@ -23,6 +23,9 @@ class App < Sinatra::Base
     set :public, Proc.new { File.join(root, "public") }
   end
 
+
+  use RackOauth2::Custom::Serve
+  use RackOauth2::Custom::TapAccessToken
   register Rack::OAuth2::Sinatra
 
   oauth.authenticator = lambda do |login, password, client_id, scope|
